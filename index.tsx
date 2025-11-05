@@ -241,7 +241,7 @@ function renderWave(width: number, height: number) {
         const visualFrequencyFactor = 50 * (Math.log10(currentFrequency) / LOG_BASE);
 
         for (let x = 0; x < width; x++) {
-            const angle = (x / width) * visualFrequencyFactor + (isListening ? 0 : phase);
+            const angle = (x / width) * visualFrequencyFactor + phase;
             const y = midHeight - Math.sin(angle) * (midHeight * currentAmplitude * 0.9);
             ctx.lineTo(x, y);
         }
@@ -251,46 +251,6 @@ function renderWave(width: number, height: number) {
     }
     
     ctx.stroke();
-    ctx.restore();
-}
-
-function renderSpectrum(width: number, height: number) {
-    if (!analyser) return;
-
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    analyser.getByteFrequencyData(dataArray);
-
-    ctx.save();
-    
-    ctx.shadowBlur = 5;
-    ctx.shadowColor = 'hsl(165, 100%, 70%)';
-
-    const numBars = 128;
-    const barWidth = width / numBars;
-    // How many frequency bins to group into one bar
-    const sampleSize = Math.floor(bufferLength / numBars);
-
-    let x = 0;
-    for (let i = 0; i < numBars; i++) {
-        let sum = 0;
-        // Average the values of the bins for the current bar
-        for (let j = 0; j < sampleSize; j++) {
-            sum += dataArray[i * sampleSize + j];
-        }
-        const avg = sum / sampleSize;
-        const barHeight = (avg / 255) * height;
-        
-        // Make louder frequencies brighter
-        const brightness = 50 + (avg / 255) * 50;
-        ctx.fillStyle = `hsl(165, 100%, ${brightness}%)`;
-        
-        // Draw the bar with a 1px gap
-        ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
-
-        x += barWidth;
-    }
-
     ctx.restore();
 }
 
@@ -308,11 +268,10 @@ function animationLoop() {
 
     if (isListening) {
         analyseMicrophoneInput();
-        renderSpectrum(width, height);
-    } else {
-        renderWave(width, height);
-        phase += 0.05;
     }
+    
+    renderWave(width, height);
+    phase += 0.05;
     
     ctx.restore();
 }

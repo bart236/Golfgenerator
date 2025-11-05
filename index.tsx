@@ -16,15 +16,44 @@ let currentFrequency = 440;
 let currentAmplitude = 0.5;
 let phase = 0;
 
+// Toon Matchen Game State
+let isToonMatchenActive = false;
+let targetFrequency = 0;
+let targetAmplitude = 0;
+let winTimeout: number | null = null;
+
+// Amplitude Parcours Game State
+let isAmplitudeGameActive = false;
+let gameOver = true;
+let score = 0;
+const gameSpeed = 2.5;
+let obstacles: { x: number; width: number; gapY: number; gapHeight: number, passed: boolean }[] = [];
+let frameCount = 0;
+const player = {
+    x: 60,
+    y: 100,
+    radius: 12
+};
+
+
 // === DOM Elements ===
 // Pages
 const landingPage = document.getElementById('landing-page') as HTMLDivElement;
 const explorerApp = document.getElementById('explorer-app') as HTMLDivElement;
+const gameSelectionPage = document.getElementById('game-selection-page') as HTMLDivElement;
+const gamePage = document.getElementById('game-page') as HTMLDivElement;
+const amplitudeGamePage = document.getElementById('amplitude-game-page') as HTMLDivElement;
 
 // Navigation
 const tileExplorer = document.getElementById('tile-explorer') as HTMLDivElement;
 const tileGames = document.getElementById('tile-games') as HTMLDivElement;
-const backButton = document.getElementById('back-button') as HTMLButtonElement;
+const tileToonMatchen = document.getElementById('tile-toon-matchen') as HTMLDivElement;
+const tileAmplitudeParcours = document.getElementById('tile-amplitude-parcours') as HTMLDivElement;
+const backButtonExplorer = document.getElementById('back-button-explorer') as HTMLButtonElement;
+const backButtonGameSelection = document.getElementById('back-button-game-selection') as HTMLButtonElement;
+const backButtonGame = document.getElementById('back-button-game') as HTMLButtonElement;
+const backButtonAmplitudeGame = document.getElementById('back-button-amplitude-game') as HTMLButtonElement;
+
 
 // Explorer App Elements
 const canvas = document.getElementById('wave-canvas') as HTMLCanvasElement;
@@ -34,26 +63,81 @@ const playButton = document.getElementById('play-button') as HTMLButtonElement;
 const micButton = document.getElementById('mic-button') as HTMLButtonElement;
 const frequencyValueDisplay = document.getElementById('frequency-value') as HTMLSpanElement;
 const amplitudeValueDisplay = document.getElementById('amplitude-value') as HTMLSpanElement;
-
 const ctx = canvas.getContext('2d')!;
+
+// Toon Matchen Game Elements
+const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+const targetFreqDisplay = document.getElementById('target-freq-value') as HTMLSpanElement;
+const userFreqDisplay = document.getElementById('user-freq-value') as HTMLSpanElement;
+const targetAmpDisplay = document.getElementById('target-amp-value') as HTMLSpanElement;
+const userAmpDisplay = document.getElementById('user-amp-value') as HTMLSpanElement;
+const newChallengeButton = document.getElementById('new-challenge-button') as HTMLButtonElement;
+const successMessage = document.getElementById('success-message') as HTMLDivElement;
+const gameCtx = gameCanvas.getContext('2d')!;
+
+// Amplitude Parcours Game Elements
+const amplitudeGameCanvas = document.getElementById('amplitude-game-canvas') as HTMLCanvasElement;
+const amplitudeGameCtx = amplitudeGameCanvas.getContext('2d')!;
+const scoreDisplay = document.getElementById('score-display') as HTMLSpanElement;
+const amplitudeGameOverlay = document.getElementById('amplitude-game-overlay') as HTMLDivElement;
+const amplitudeGameMessage = document.getElementById('amplitude-game-message') as HTMLHeadingElement;
+const amplitudeRestartButton = document.getElementById('amplitude-restart-button') as HTMLButtonElement;
+
 
 // === Navigation ===
 function showExplorer() {
     landingPage.classList.remove('active');
+    gameSelectionPage.classList.remove('active');
     explorerApp.classList.add('active');
 }
 
+function showGameSelectionPage() {
+    landingPage.classList.remove('active');
+    explorerApp.classList.remove('active');
+    gamePage.classList.remove('active');
+    amplitudeGamePage.classList.remove('active');
+    gameSelectionPage.classList.add('active');
+    
+    // Stop any active games
+    isToonMatchenActive = false;
+    isAmplitudeGameActive = false;
+
+    // A single back button on a game page might have brought us here,
+    // but the microphone might still be needed if the user selects the other game.
+    // So we don't stop the mic here, only when returning to the landing page.
+}
+
+async function showGamePage() { // Toon Matchen
+    gameSelectionPage.classList.remove('active');
+    gamePage.classList.add('active');
+    isToonMatchenActive = true;
+    startNewChallenge();
+    await startMicIfNeeded();
+}
+
+async function showAmplitudeGamePage() {
+    gameSelectionPage.classList.remove('active');
+    amplitudeGamePage.classList.add('active');
+    isAmplitudeGameActive = true;
+    resetAmplitudeGame();
+    await startMicIfNeeded();
+}
+
+
 function showLandingPage() {
-    // Stop any audio before navigating away
-    if (isPlaying) {
-        togglePlayback();
-    }
-    if (isListening) {
-        toggleMicrophone();
-    }
+    if (isPlaying) togglePlayback();
+    if (isListening) toggleMicrophone(); // Stops mic and resets state
 
     explorerApp.classList.remove('active');
+    gamePage.classList.remove('active');
+    gameSelectionPage.classList.remove('active');
+    amplitudeGamePage.classList.remove('active');
     landingPage.classList.add('active');
+    
+    isToonMatchenActive = false;
+    isAmplitudeGameActive = false;
+    if (winTimeout) clearTimeout(winTimeout);
+    winTimeout = null;
 }
 
 
@@ -64,6 +148,26 @@ function initializeAudio() {
     }
 }
 
+async function startMicIfNeeded() {
+     if (!isListening) {
+        initializeAudio();
+        if (audioContext!.state === 'suspended') await audioContext!.resume();
+        try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            micSource = audioContext!.createMediaStreamSource(micStream);
+            analyser = audioContext!.createAnalyser();
+            analyser.fftSize = 2048;
+            micSource.connect(analyser);
+            isListening = true; // Set listening state globally
+        } catch (err) {
+            console.error('Error starting mic for game:', err);
+            alert('Kon geen toegang krijgen tot de microfoon. Controleer de browserrechten.');
+            showLandingPage();
+        }
+    }
+}
+
+
 function togglePlayback() {
     initializeAudio();
     if (audioContext!.state === 'suspended') {
@@ -73,7 +177,7 @@ function togglePlayback() {
     isPlaying = !isPlaying;
 
     if (isPlaying) {
-        if (isListening) toggleMicrophone(); // Stop mic if it's on
+        if (isListening) toggleMicrophone();
 
         oscillator = audioContext!.createOscillator();
         gainNode = audioContext!.createGain();
@@ -85,10 +189,7 @@ function togglePlayback() {
         oscillator.start();
         
         playButton.textContent = 'Stop Toon';
-        playButton.setAttribute('aria-label', 'Stop Toon');
         micButton.disabled = true;
-        frequencySlider.disabled = false;
-        amplitudeSlider.disabled = false;
 
     } else {
         if (oscillator) {
@@ -99,12 +200,11 @@ function togglePlayback() {
             gainNode = null;
         }
         playButton.textContent = 'Speel Toon Af';
-        playButton.setAttribute('aria-label', 'Speel Toon Af');
         micButton.disabled = false;
     }
 }
 
-async function toggleMicrophone() {
+async function toggleMicrophone() { // Only used in explorer now
     initializeAudio();
     if (audioContext!.state === 'suspended') {
         await audioContext!.resume();
@@ -113,7 +213,7 @@ async function toggleMicrophone() {
     isListening = !isListening;
 
     if(isListening) {
-        if (isPlaying) togglePlayback(); // Stop synth if it's on
+        if (isPlaying) togglePlayback();
 
         try {
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -123,7 +223,6 @@ async function toggleMicrophone() {
             micSource.connect(analyser);
 
             micButton.textContent = 'Stop Microfoon';
-            micButton.setAttribute('aria-label', 'Stop Microfoon');
             playButton.disabled = true;
             frequencySlider.disabled = true;
             amplitudeSlider.disabled = true;
@@ -145,19 +244,17 @@ async function toggleMicrophone() {
         analyser = null;
 
         micButton.textContent = 'Gebruik Microfoon';
-        micButton.setAttribute('aria-label', 'Gebruik Microfoon');
         playButton.disabled = false;
         frequencySlider.disabled = false;
         amplitudeSlider.disabled = false;
         
-        // Reset to slider values
         updateFrequency(parseFloat(frequencySlider.value));
         updateAmplitude(parseFloat(amplitudeSlider.value));
     }
 }
 
 
-// === Analysis Logic ===
+// === Analysis & Game Logic ===
 function analyseMicrophoneInput() {
     if (!analyser || !isListening) return;
 
@@ -165,20 +262,17 @@ function analyseMicrophoneInput() {
     const dataArray = new Float32Array(bufferLength);
     analyser.getFloatTimeDomainData(dataArray);
 
-    // --- Amplitude (RMS) ---
     let sumSquares = 0.0;
     for (const amplitude of dataArray) {
         sumSquares += amplitude * amplitude;
     }
     const rms = Math.sqrt(sumSquares / bufferLength);
-    // Scale and clamp amplitude, add a noise gate
-    const sensitivity = 5; // Adjust sensitivity
+    const sensitivity = 5;
     const noiseGate = 0.01;
     let newAmplitude = rms > noiseGate ? Math.min(rms * sensitivity, 1.0) : 0;
     updateAmplitude(newAmplitude);
     
-    // --- Frequency (Autocorrelation) ---
-    if (newAmplitude > 0.05) { // Only calculate frequency if sound is loud enough
+    if (newAmplitude > 0.05) {
          let bestOffset = -1;
          let bestCorrelation = 0;
          let rm_s = 0;
@@ -187,7 +281,7 @@ function analyseMicrophoneInput() {
              rm_s += dataArray[i] * dataArray[i];
          }
          rm_s = Math.sqrt(rm_s / bufferLength);
-         if (rm_s < 0.01) return; // Not enough signal
+         if (rm_s < 0.01) return;
  
          for (let offset = 80; offset < 1000; offset++) {
              let correlation = 0;
@@ -209,112 +303,238 @@ function analyseMicrophoneInput() {
     }
 }
 
+// --- Toon Matchen Logic ---
+function startNewChallenge() {
+    successMessage.classList.remove('visible');
+    if(winTimeout) clearTimeout(winTimeout);
+    winTimeout = null;
+
+    targetFrequency = Math.random() * (600 - 150) + 150; // Vocal range
+    targetAmplitude = Math.random() * (0.7 - 0.3) + 0.3;
+
+    targetFreqDisplay.textContent = `${Math.round(targetFrequency)} Hz`;
+    targetAmpDisplay.textContent = `${Math.round(targetAmplitude * 100)}%`;
+}
+
+function checkWinCondition() {
+    if (!isToonMatchenActive || winTimeout) return;
+
+    const freqTolerance = 0.07; // 7%
+    const ampTolerance = 0.20; // 20%
+
+    const freqMatch = Math.abs(currentFrequency - targetFrequency) < targetFrequency * freqTolerance;
+    const ampMatch = Math.abs(currentAmplitude - targetAmplitude) < ampTolerance;
+
+    if (freqMatch && ampMatch && currentAmplitude > 0.1) {
+        winTimeout = window.setTimeout(() => {
+            successMessage.classList.add('visible');
+        }, 500); // Must hold for 0.5 seconds
+    }
+}
+
+// --- Amplitude Parcours Logic ---
+function resetAmplitudeGame() {
+    gameOver = true;
+    score = 0;
+    obstacles = [];
+    frameCount = 0;
+    player.y = amplitudeGameCanvas.height / 2;
+    scoreDisplay.textContent = '0';
+    amplitudeGameOverlay.style.display = 'flex';
+    amplitudeGameMessage.textContent = 'Klaar om te Starten?';
+    amplitudeRestartButton.textContent = 'Start';
+}
+
+function startGame() {
+    gameOver = false;
+    amplitudeGameOverlay.style.display = 'none';
+}
+
+function updateAmplitudeGameState() {
+    if (gameOver) return;
+
+    const { width, height } = amplitudeGameCanvas;
+    
+    // Update player position based on amplitude
+    const targetY = height - (currentAmplitude * height * 1.5); // *1.5 for more sensitivity
+    player.y += (targetY - player.y) * 0.1; // Smooth movement
+
+    // Move and generate obstacles
+    frameCount++;
+    if (frameCount % 120 === 0) { // Add obstacle every 2 seconds at 60fps
+        const gapHeight = 120;
+        const gapY = Math.random() * (height - gapHeight - 40) + 20;
+        obstacles.push({ x: width, width: 40, gapY, gapHeight, passed: false });
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.x -= gameSpeed;
+
+        // Collision detection
+        const playerTop = player.y - player.radius;
+        const playerBottom = player.y + player.radius;
+        const playerLeft = player.x - player.radius;
+        const playerRight = player.x + player.radius;
+
+        if (playerRight > o.x && playerLeft < o.x + o.width) {
+            if (playerTop < o.gapY || playerBottom > o.gapY + o.gapHeight) {
+                gameOver = true;
+                amplitudeGameOverlay.style.display = 'flex';
+                amplitudeGameMessage.textContent = 'Game Over!';
+                amplitudeRestartButton.textContent = 'Opnieuw';
+            }
+        }
+        
+        // Score
+        if (!o.passed && o.x + o.width < player.x) {
+            score++;
+            o.passed = true;
+            scoreDisplay.textContent = score.toString();
+        }
+
+        // Remove off-screen obstacles
+        if (o.x + o.width < 0) {
+            obstacles.splice(i, 1);
+        }
+    }
+}
+
 
 // === Drawing Logic ===
-function resizeCanvasIfNeeded(): boolean {
+function resizeCanvasIfNeeded(canvasEl: HTMLCanvasElement): boolean {
     const dpr = window.devicePixelRatio || 1;
-    const { width, height } = canvas.getBoundingClientRect();
-    const displayWidth = Math.round(width);
-    const displayHeight = Math.round(height);
+    const { width, height } = canvasEl.getBoundingClientRect();
+    const displayWidth = Math.round(width * dpr);
+    const displayHeight = Math.round(height * dpr);
 
-    if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
-        canvas.width = displayWidth * dpr;
-        canvas.height = displayHeight * dpr;
+    if (canvasEl.width !== displayWidth || canvasEl.height !== displayHeight) {
+        canvasEl.width = displayWidth;
+        canvasEl.height = displayHeight;
         return true;
     }
     return false;
 }
 
-function drawGrid(width: number, height: number) {
+function drawGrid(context: CanvasRenderingContext2D, width: number, height: number) {
     const midHeight = height / 2;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+    context.save();
+    context.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    context.lineWidth = 1;
+    context.setLineDash([4, 4]);
     const verticalLineCount = Math.floor(width / 50);
-    ctx.beginPath();
+    context.beginPath();
     for (let i = 1; i <= verticalLineCount; i++) {
         const x = i * 50;
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
     }
     const horizontalLinePositions = [midHeight * 0.5, midHeight * 1.5];
     for(const y of horizontalLinePositions) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
+        context.moveTo(0, y);
+        context.lineTo(width, y);
     }
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.moveTo(0, midHeight);
-    ctx.lineTo(width, midHeight);
-    ctx.stroke();
-    ctx.restore();
+    context.stroke();
+    context.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    context.lineWidth = 1.5;
+    context.setLineDash([]);
+    context.beginPath();
+    context.moveTo(0, midHeight);
+    context.lineTo(width, midHeight);
+    context.stroke();
+    context.restore();
 }
 
-function renderWave(width: number, height: number) {
+function drawWave(context: CanvasRenderingContext2D, width: number, height: number, frequency: number, amplitude: number, color: string, shadowColor: string, wavePhase: number) {
     const midHeight = height / 2;
-    ctx.save();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'hsl(165, 100%, 50%)';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = 'hsl(165, 100%, 70%)';
-    ctx.beginPath();
-    ctx.moveTo(0, midHeight);
+    context.save();
+    context.lineWidth = 3;
+    context.strokeStyle = color;
+    context.shadowBlur = 10;
+    context.shadowColor = shadowColor;
+    context.beginPath();
+    context.moveTo(0, midHeight);
 
-    if (currentFrequency > 0) {
-        // Gebruik een lineaire schaal voor de visuele frequentie, wat intuïtiever is
-        // voor het kleinere bereik van 100-2000 Hz.
-        const numCycles = currentFrequency / 50;
+    if (frequency > 0) {
+        const numCycles = frequency / 100;
         const totalAngle = numCycles * 2 * Math.PI;
 
         for (let x = 0; x < width; x++) {
-            const angle = (x / width) * totalAngle + phase;
-            const y = midHeight - Math.sin(angle) * (midHeight * currentAmplitude * 0.9);
-            ctx.lineTo(x, y);
+            const angle = (x / width) * totalAngle + wavePhase;
+            const y = midHeight - Math.sin(angle) * (midHeight * amplitude * 0.8);
+            context.lineTo(x, y);
         }
     } else {
-        // Als de frequentie 0 is (of stil), teken dan een platte lijn.
-        ctx.lineTo(width, midHeight);
+        context.lineTo(width, midHeight);
     }
     
-    ctx.stroke();
-    ctx.restore();
+    context.stroke();
+    context.restore();
 }
+
+function drawAmplitudeGameScene() {
+    const { width, height } = amplitudeGameCanvas;
+    amplitudeGameCtx.clearRect(0, 0, width, height);
+
+    // Draw obstacles
+    amplitudeGameCtx.fillStyle = 'hsl(210, 80%, 60%)';
+    for (const o of obstacles) {
+        amplitudeGameCtx.fillRect(o.x, 0, o.width, o.gapY); // Top part
+        amplitudeGameCtx.fillRect(o.x, o.gapY + o.gapHeight, o.width, height - (o.gapY + o.gapHeight)); // Bottom part
+    }
+
+    // Draw player
+    amplitudeGameCtx.beginPath();
+    amplitudeGameCtx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    amplitudeGameCtx.fillStyle = 'hsl(350, 100%, 70%)';
+    amplitudeGameCtx.shadowColor = 'hsl(350, 100%, 80%)';
+    amplitudeGameCtx.shadowBlur = 15;
+    amplitudeGameCtx.fill();
+    amplitudeGameCtx.shadowBlur = 0;
+}
+
 
 function animationLoop() {
     requestAnimationFrame(animationLoop);
     
-    // Only render if the explorer is active
-    if (!explorerApp.classList.contains('active')) return;
-
-    resizeCanvasIfNeeded();
-
-    const dpr = window.devicePixelRatio || 1;
-    const { clientWidth: width, clientHeight: height } = canvas;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.scale(dpr, dpr);
-    
-    drawGrid(width, height);
-
+    // Always analyse mic if it's on
     if (isListening) {
         analyseMicrophoneInput();
     }
-    
-    renderWave(width, height);
-    phase += 0.05;
-    
-    ctx.restore();
+
+    if (explorerApp.classList.contains('active')) {
+        resizeCanvasIfNeeded(canvas);
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+        drawGrid(ctx, width, height);
+        drawWave(ctx, width, height, currentFrequency, currentAmplitude, 'hsl(165, 100%, 50%)', 'hsl(165, 100%, 70%)', phase);
+        phase += 0.05;
+    } else if (gamePage.classList.contains('active')) {
+        resizeCanvasIfNeeded(gameCanvas);
+        const { width, height } = gameCanvas;
+        gameCtx.clearRect(0, 0, width, height);
+        drawGrid(gameCtx, width, height);
+        
+        if (isToonMatchenActive) checkWinCondition();
+
+        drawWave(gameCtx, width, height, targetFrequency, targetAmplitude, 'hsl(120, 100%, 50%)', 'hsl(120, 100%, 70%)', 0);
+        drawWave(gameCtx, width, height, currentFrequency, currentAmplitude, 'hsl(0, 100%, 60%)', 'hsl(0, 100%, 70%)', phase);
+        phase += 0.05;
+    } else if (amplitudeGamePage.classList.contains('active')) {
+        resizeCanvasIfNeeded(amplitudeGameCanvas);
+        updateAmplitudeGameState();
+        drawAmplitudeGameScene();
+    }
 }
 
 
 // === UI Updates ===
 function updateFrequency(value: number) {
     currentFrequency = value;
-    frequencyValueDisplay.textContent = `${Math.round(currentFrequency)} Hz`;
+    const roundedFreq = Math.round(currentFrequency);
+    frequencyValueDisplay.textContent = `${roundedFreq} Hz`;
+    if(isToonMatchenActive) userFreqDisplay.textContent = `${roundedFreq} Hz`;
+
     if (isPlaying && oscillator) {
         oscillator.frequency.setValueAtTime(currentFrequency, audioContext!.currentTime);
     }
@@ -322,7 +542,10 @@ function updateFrequency(value: number) {
 
 function updateAmplitude(value: number) {
     currentAmplitude = value;
-    amplitudeValueDisplay.textContent = `${Math.round(currentAmplitude * 100)}%`;
+    const roundedAmp = Math.round(currentAmplitude * 100);
+    amplitudeValueDisplay.textContent = `${roundedAmp}%`;
+    if(isToonMatchenActive) userAmpDisplay.textContent = `${roundedAmp}%`;
+
     if (isPlaying && gainNode) {
         gainNode.gain.setValueAtTime(currentAmplitude, audioContext!.currentTime);
     }
@@ -333,11 +556,16 @@ function updateAmplitude(value: number) {
 function setupEventListeners() {
     // Navigation
     tileExplorer.addEventListener('click', showExplorer);
-    tileGames.addEventListener('click', () => {
-        alert('Deze functie is binnenkort beschikbaar!');
-    });
-    backButton.addEventListener('click', showLandingPage);
-    
+    tileGames.addEventListener('click', showGameSelectionPage);
+    backButtonExplorer.addEventListener('click', showLandingPage);
+    backButtonGameSelection.addEventListener('click', showLandingPage);
+    backButtonGame.addEventListener('click', showGameSelectionPage);
+    backButtonAmplitudeGame.addEventListener('click', showGameSelectionPage);
+
+    // Game Selection
+    tileToonMatchen.addEventListener('click', showGamePage);
+    tileAmplitudeParcours.addEventListener('click', showAmplitudeGamePage);
+
     // Explorer controls
     frequencySlider.addEventListener('input', (e) => {
         updateFrequency(parseFloat((e.target as HTMLInputElement).value));
@@ -347,14 +575,21 @@ function setupEventListeners() {
     });
     playButton.addEventListener('click', togglePlayback);
     micButton.addEventListener('click', toggleMicrophone);
+
+    // Toon Matchen controls
+    newChallengeButton.addEventListener('click', startNewChallenge);
+
+    // Amplitude Parcours controls
+    amplitudeRestartButton.addEventListener('click', () => {
+        if (gameOver) {
+            resetAmplitudeGame();
+            startGame();
+        }
+    });
 }
 
 // === Initialization ===
 function main() {
-    if (!canvas || !frequencySlider || !amplitudeSlider || !playButton || !micButton) {
-        console.error("One or more required elements are not found in the DOM.");
-        return;
-    }
     setupEventListeners();
     requestAnimationFrame(animationLoop);
 }

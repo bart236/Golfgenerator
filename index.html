@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geluidsgolf Visualizer</title>
+    <title>Geluidsverkenner</title>
     <style>
         :root {
             --background-color: #1a1a2e;
@@ -20,15 +20,105 @@
             font-family: var(--font-family);
             background-color: var(--background-color);
             color: var(--text-color);
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        .page {
+            display: none;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .page.active {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow: hidden;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .container {
+            text-align: center;
+            width: 90%;
+        }
+        
+        #landing-page .container {
+            max-width: 800px;
+        }
+
+        h1 {
+            color: var(--text-color);
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .tile-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            width: 100%;
+        }
+
+        .tile {
+            background: var(--primary-color);
+            padding: 2rem 1.5rem;
+            border-radius: 15px;
+            border: 1px solid var(--secondary-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            text-align: center;
+        }
+
+        .tile:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            border-color: var(--accent-color);
+        }
+
+        .tile svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1rem;
+            fill: var(--wave-color);
+        }
+
+        .tile h2 {
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .tile p {
+            color: var(--text-color);
+            opacity: 0.8;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .tile.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .tile.disabled:hover {
+            transform: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-color: var(--secondary-color);
+        }
+        
+        .explorer-container {
+            display: flex;
+            flex-direction: column;
             background: var(--primary-color);
             padding: 2rem;
             border-radius: 15px;
@@ -37,13 +127,26 @@
             width: 90%;
             max-width: 600px;
             border: 1px solid var(--secondary-color);
+            position: relative;
         }
 
-        h1 {
+        .back-button {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: var(--secondary-color);
             color: var(--text-color);
-            margin-bottom: 1.5rem;
-            font-size: 2rem;
-            letter-spacing: 1px;
+            border: none;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            z-index: 10;
+        }
+        .back-button:hover {
+            background: var(--accent-color);
         }
 
         #wave-canvas {
@@ -166,27 +269,48 @@
 </head>
 <body>
 
-    <div class="container">
-        <h1>Geluidsgolf Verkenner</h1>
-        <canvas id="wave-canvas"></canvas>
-        <div class="controls">
-            <div class="control-group">
-                 <div class="label-container">
-                    <label for="frequency">Frequentie (Toonhoogte)</label>
-                    <span id="frequency-value" class="value">440 Hz</span>
-                 </div>
-                <input type="range" id="frequency" min="100" max="20000" value="440" step="1">
-            </div>
-            <div class="control-group">
-                <div class="label-container">
-                    <label for="amplitude">Amplitude (Volume)</label>
-                    <span id="amplitude-value" class="value">50%</span>
+    <div id="landing-page" class="page active">
+        <div class="container">
+            <h1>Geluidsverkenner</h1>
+            <div class="tile-container">
+                <div class="tile" id="tile-explorer" role="button" tabindex="0" aria-label="Open de geluidsgolf verkenner">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <h2>Verkenner</h2>
+                    <p>Ontdek en creëer je eigen geluidsgolven.</p>
                 </div>
-                <input type="range" id="amplitude" min="0" max="1" value="0.5" step="0.01">
+                <div class="tile disabled" id="tile-games" role="button" tabindex="0" aria-label="Opdrachten en minigames, binnenkort beschikbaar">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h4v-1.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5V21h4c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+                    <h2>Opdrachten & Minigames</h2>
+                    <p>Test je kennis met leuke opdrachten (binnenkort!).</p>
+                </div>
             </div>
-            <div class="action-buttons">
-                <button id="play-button" aria-label="Speel Toon Af">Speel Toon Af</button>
-                <button id="mic-button" aria-label="Gebruik Microfoon">Gebruik Microfoon</button>
+        </div>
+    </div>
+
+    <div id="explorer-app" class="page">
+        <div class="explorer-container">
+            <button id="back-button" aria-label="Terug naar hoofdmenu">&larr; Terug</button>
+            <h1 style="margin-top: 1.5rem; font-size: 2rem;">Geluidsgolf Verkenner</h1>
+            <canvas id="wave-canvas"></canvas>
+            <div class="controls">
+                <div class="control-group">
+                     <div class="label-container">
+                        <label for="frequency">Frequentie (Toonhoogte)</label>
+                        <span id="frequency-value" class="value">440 Hz</span>
+                     </div>
+                    <input type="range" id="frequency" min="100" max="2000" value="440" step="1">
+                </div>
+                <div class="control-group">
+                    <div class="label-container">
+                        <label for="amplitude">Amplitude (Volume)</label>
+                        <span id="amplitude-value" class="value">50%</span>
+                    </div>
+                    <input type="range" id="amplitude" min="0" max="1" value="0.5" step="0.01">
+                </div>
+                <div class="action-buttons">
+                    <button id="play-button" aria-label="Speel Toon Af">Speel Toon Af</button>
+                    <button id="mic-button" aria-label="Gebruik Microfoon">Gebruik Microfoon</button>
+                </div>
             </div>
         </div>
     </div>

@@ -17,6 +17,16 @@ let currentAmplitude = 0.5;
 let phase = 0;
 
 // === DOM Elements ===
+// Pages
+const landingPage = document.getElementById('landing-page') as HTMLDivElement;
+const explorerApp = document.getElementById('explorer-app') as HTMLDivElement;
+
+// Navigation
+const tileExplorer = document.getElementById('tile-explorer') as HTMLDivElement;
+const tileGames = document.getElementById('tile-games') as HTMLDivElement;
+const backButton = document.getElementById('back-button') as HTMLButtonElement;
+
+// Explorer App Elements
 const canvas = document.getElementById('wave-canvas') as HTMLCanvasElement;
 const frequencySlider = document.getElementById('frequency') as HTMLInputElement;
 const amplitudeSlider = document.getElementById('amplitude') as HTMLInputElement;
@@ -26,6 +36,26 @@ const frequencyValueDisplay = document.getElementById('frequency-value') as HTML
 const amplitudeValueDisplay = document.getElementById('amplitude-value') as HTMLSpanElement;
 
 const ctx = canvas.getContext('2d')!;
+
+// === Navigation ===
+function showExplorer() {
+    landingPage.classList.remove('active');
+    explorerApp.classList.add('active');
+}
+
+function showLandingPage() {
+    // Stop any audio before navigating away
+    if (isPlaying) {
+        togglePlayback();
+    }
+    if (isListening) {
+        toggleMicrophone();
+    }
+
+    explorerApp.classList.remove('active');
+    landingPage.classList.add('active');
+}
+
 
 // === Audio Control ===
 function initializeAudio() {
@@ -235,18 +265,18 @@ function renderWave(width: number, height: number) {
     ctx.moveTo(0, midHeight);
 
     if (currentFrequency > 0) {
-        // Use a logarithmic scale for visual frequency to keep it from looking too crowded.
-        // This ensures that even at high frequencies, the wave is still discernible.
-        const LOG_BASE = Math.log10(1000); // Base frequency for scaling (1000 Hz)
-        const visualFrequencyFactor = 50 * (Math.log10(currentFrequency) / LOG_BASE);
+        // Gebruik een lineaire schaal voor de visuele frequentie, wat intuïtiever is
+        // voor het kleinere bereik van 100-2000 Hz.
+        const numCycles = currentFrequency / 50;
+        const totalAngle = numCycles * 2 * Math.PI;
 
         for (let x = 0; x < width; x++) {
-            const angle = (x / width) * visualFrequencyFactor + phase;
+            const angle = (x / width) * totalAngle + phase;
             const y = midHeight - Math.sin(angle) * (midHeight * currentAmplitude * 0.9);
             ctx.lineTo(x, y);
         }
     } else {
-        // If frequency is 0 (or silent), draw a flat line.
+        // Als de frequentie 0 is (of stil), teken dan een platte lijn.
         ctx.lineTo(width, midHeight);
     }
     
@@ -256,6 +286,10 @@ function renderWave(width: number, height: number) {
 
 function animationLoop() {
     requestAnimationFrame(animationLoop);
+    
+    // Only render if the explorer is active
+    if (!explorerApp.classList.contains('active')) return;
+
     resizeCanvasIfNeeded();
 
     const dpr = window.devicePixelRatio || 1;
@@ -297,6 +331,14 @@ function updateAmplitude(value: number) {
 
 // === Event Listeners ===
 function setupEventListeners() {
+    // Navigation
+    tileExplorer.addEventListener('click', showExplorer);
+    tileGames.addEventListener('click', () => {
+        alert('Deze functie is binnenkort beschikbaar!');
+    });
+    backButton.addEventListener('click', showLandingPage);
+    
+    // Explorer controls
     frequencySlider.addEventListener('input', (e) => {
         updateFrequency(parseFloat((e.target as HTMLInputElement).value));
     });

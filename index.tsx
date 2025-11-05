@@ -54,8 +54,8 @@ function togglePlayback() {
         gainNode.gain.setValueAtTime(currentAmplitude, audioContext!.currentTime);
         oscillator.start();
         
-        playButton.textContent = 'Stop Tone';
-        playButton.setAttribute('aria-label', 'Stop Tone');
+        playButton.textContent = 'Stop Toon';
+        playButton.setAttribute('aria-label', 'Stop Toon');
         micButton.disabled = true;
         frequencySlider.disabled = false;
         amplitudeSlider.disabled = false;
@@ -68,8 +68,8 @@ function togglePlayback() {
             oscillator = null;
             gainNode = null;
         }
-        playButton.textContent = 'Play Tone';
-        playButton.setAttribute('aria-label', 'Play Tone');
+        playButton.textContent = 'Speel Toon Af';
+        playButton.setAttribute('aria-label', 'Speel Toon Af');
         micButton.disabled = false;
     }
 }
@@ -92,15 +92,15 @@ async function toggleMicrophone() {
             analyser.fftSize = 2048;
             micSource.connect(analyser);
 
-            micButton.textContent = 'Stop Mic';
-            micButton.setAttribute('aria-label', 'Stop Microphone');
+            micButton.textContent = 'Stop Microfoon';
+            micButton.setAttribute('aria-label', 'Stop Microfoon');
             playButton.disabled = true;
             frequencySlider.disabled = true;
             amplitudeSlider.disabled = true;
 
         } catch (err) {
             console.error('Error accessing microphone:', err);
-            alert('Could not access the microphone. Please check your browser permissions.');
+            alert('Kon geen toegang krijgen tot de microfoon. Controleer de browserrechten.');
             isListening = false;
         }
     } else {
@@ -114,8 +114,8 @@ async function toggleMicrophone() {
         micSource = null;
         analyser = null;
 
-        micButton.textContent = 'Use Microphone';
-        micButton.setAttribute('aria-label', 'Use Microphone');
+        micButton.textContent = 'Gebruik Microfoon';
+        micButton.setAttribute('aria-label', 'Gebruik Microfoon');
         playButton.disabled = false;
         frequencySlider.disabled = false;
         amplitudeSlider.disabled = false;
@@ -337,69 +337,6 @@ function updateAmplitude(value: number) {
 
 
 // === Event Listeners ===
-function handleKeyDown(e: KeyboardEvent) {
-    // Check for focus on input elements to avoid conflicts, but allow space/m
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' && e.key !== ' ' && e.key.toLowerCase() !== 'm') {
-        return;
-    }
-
-    if (e.key === ' ') {
-        e.preventDefault();
-        playButton.click();
-    } else if (e.key.toLowerCase() === 'm') {
-        e.preventDefault();
-        micButton.click();
-    }
-
-    if (isListening || isPlaying) {
-         // Don't allow synth controls when mic is on, but allow when playing
-         if(isListening) return;
-    }
-
-    const freqStep = e.shiftKey ? 100 : 10;
-    const ampStep = e.shiftKey ? 0.1 : 0.01;
-
-    let newFrequency = currentFrequency;
-    let newAmplitude = currentAmplitude;
-    let changed = false;
-
-    switch (e.key) {
-        case 'ArrowUp':
-            e.preventDefault();
-            newFrequency = Math.min(parseFloat(frequencySlider.max), currentFrequency + freqStep);
-            changed = true;
-            break;
-        case 'ArrowDown':
-            e.preventDefault();
-            newFrequency = Math.max(parseFloat(frequencySlider.min), currentFrequency - freqStep);
-            changed = true;
-            break;
-        case 'ArrowRight':
-             e.preventDefault();
-            newAmplitude = Math.min(parseFloat(amplitudeSlider.max), currentAmplitude + ampStep);
-            changed = true;
-            break;
-        case 'ArrowLeft':
-             e.preventDefault();
-            newAmplitude = Math.max(parseFloat(amplitudeSlider.min), currentAmplitude - ampStep);
-            changed = true;
-            break;
-    }
-
-    if (changed) {
-        if (newFrequency !== currentFrequency) {
-            frequencySlider.value = String(newFrequency);
-            updateFrequency(newFrequency);
-        }
-        if (newAmplitude !== currentAmplitude) {
-            amplitudeSlider.value = String(newAmplitude);
-            updateAmplitude(newAmplitude);
-        }
-    }
-}
-
-
 function setupEventListeners() {
     frequencySlider.addEventListener('input', (e) => {
         updateFrequency(parseFloat((e.target as HTMLInputElement).value));
@@ -409,7 +346,6 @@ function setupEventListeners() {
     });
     playButton.addEventListener('click', togglePlayback);
     micButton.addEventListener('click', toggleMicrophone);
-    document.addEventListener('keydown', handleKeyDown);
 }
 
 // === Initialization ===

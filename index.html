@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sound Wave Visualizer</title>
+    <title>Geluidsgolf Visualizer</title>
     <style>
         :root {
             --background-color: #1a1a2e;
@@ -162,70 +162,32 @@
             cursor: not-allowed;
             opacity: 0.7;
         }
-        
-        .keyboard-info {
-            margin-top: 2rem;
-            font-size: 0.85rem;
-            color: rgba(224, 224, 224, 0.6);
-            text-align: left;
-            border-top: 1px solid var(--secondary-color);
-            padding-top: 1rem;
-        }
-
-        .keyboard-info p {
-            margin: 0 0 0.5rem 0;
-        }
-
-        .keyboard-info ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.5rem;
-        }
-        
-        .keyboard-info li {
-            background: var(--secondary-color);
-            padding: 0.4rem 0.6rem;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Sound Wave Explorer</h1>
+        <h1>Geluidsgolf Verkenner</h1>
         <canvas id="wave-canvas"></canvas>
         <div class="controls">
             <div class="control-group">
                  <div class="label-container">
-                    <label for="frequency">Frequency (Pitch)</label>
+                    <label for="frequency">Frequentie (Toonhoogte)</label>
                     <span id="frequency-value" class="value">440 Hz</span>
                  </div>
                 <input type="range" id="frequency" min="100" max="20000" value="440" step="1">
             </div>
             <div class="control-group">
                 <div class="label-container">
-                    <label for="amplitude">Amplitude (Loudness)</label>
+                    <label for="amplitude">Amplitude (Volume)</label>
                     <span id="amplitude-value" class="value">50%</span>
                 </div>
                 <input type="range" id="amplitude" min="0" max="1" value="0.5" step="0.01">
             </div>
             <div class="action-buttons">
-                <button id="play-button" aria-label="Play Tone">Play Tone</button>
-                <button id="mic-button" aria-label="Use Microphone">Use Microphone</button>
+                <button id="play-button" aria-label="Speel Toon Af">Speel Toon Af</button>
+                <button id="mic-button" aria-label="Gebruik Microfoon">Gebruik Microfoon</button>
             </div>
-        </div>
-        <div class="keyboard-info">
-            <p><strong>Keyboard Controls:</strong></p>
-            <ul>
-                <li><strong>Space:</strong> Play/Stop Tone</li>
-                <li><strong>M:</strong> Toggle Mic</li>
-                <li><strong>&uarr;/&darr;:</strong> Adjust Frequency</li>
-                <li><strong>&larr;/&rarr;:</strong> Adjust Amplitude</li>
-                <li><strong>Shift + Arrows:</strong> Faster adjustment</li>
-            </ul>
         </div>
     </div>
 

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Wave Visualizer</title>
+    <style>
+        :root {
+            --background-color: #1a1a2e;
+            --primary-color: #16213e;
+            --secondary-color: #0f3460;
+            --accent-color: #5372f0;
+            --highlight-color: #e94560;
+            --wave-color: #00ffc3;
+            --text-color: #e0e0e0;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            background: var(--primary-color);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid var(--secondary-color);
+        }
+
+        h1 {
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            letter-spacing: 1px;
+        }
+
+        #wave-canvas {
+            background-color: #000;
+            border-radius: 10px;
+            width: 100%;
+            height: 200px;
+            box-shadow: inset 0 0 10px #000;
+            margin-bottom: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-group {
+            text-align: left;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .control-group .label-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group .value {
+            font-weight: bold;
+            color: var(--wave-color);
+            background: var(--secondary-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 5px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--secondary-color);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        input[type="range"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            border: 2px solid var(--text-color);
+            transition: background 0.2s;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            border: 2px solid var(--text-color);
+            transition: background 0.2s;
+        }
+        
+        input[type="range"]:hover:not(:disabled)::-webkit-slider-thumb {
+            background: var(--highlight-color);
+        }
+        input[type="range"]:hover:not(:disabled)::-moz-range-thumb {
+            background: var(--highlight-color);
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .action-buttons button {
+            padding: 0.8rem 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--text-color);
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease, opacity 0.3s;
+        }
+
+        .action-buttons button:hover:not(:disabled) {
+            background-color: var(--highlight-color);
+        }
+
+        .action-buttons button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .action-buttons button:disabled {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .keyboard-info {
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: rgba(224, 224, 224, 0.6);
+            text-align: left;
+            border-top: 1px solid var(--secondary-color);
+            padding-top: 1rem;
+        }
+
+        .keyboard-info p {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .keyboard-info ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .keyboard-info li {
+            background: var(--secondary-color);
+            padding: 0.4rem 0.6rem;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Sound Wave Explorer</h1>
+        <canvas id="wave-canvas"></canvas>
+        <div class="controls">
+            <div class="control-group">
+                 <div class="label-container">
+                    <label for="frequency">Frequency (Pitch)</label>
+                    <span id="frequency-value" class="value">440 Hz</span>
+                 </div>
+                <input type="range" id="frequency" min="100" max="20000" value="440" step="1">
+            </div>
+            <div class="control-group">
+                <div class="label-container">
+                    <label for="amplitude">Amplitude (Loudness)</label>
+                    <span id="amplitude-value" class="value">50%</span>
+                </div>
+                <input type="range" id="amplitude" min="0" max="1" value="0.5" step="0.01">
+            </div>
+            <div class="action-buttons">
+                <button id="play-button" aria-label="Play Tone">Play Tone</button>
+                <button id="mic-button" aria-label="Use Microphone">Use Microphone</button>
+            </div>
+        </div>
+        <div class="keyboard-info">
+            <p><strong>Keyboard Controls:</strong></p>
+            <ul>
+                <li><strong>Space:</strong> Play/Stop Tone</li>
+                <li><strong>M:</strong> Toggle Mic</li>
+                <li><strong>&uarr;/&darr;:</strong> Adjust Frequency</li>
+                <li><strong>&larr;/&rarr;:</strong> Adjust Amplitude</li>
+                <li><strong>Shift + Arrows:</strong> Faster adjustment</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

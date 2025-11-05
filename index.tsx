@@ -422,28 +422,51 @@ function checkExercise(exerciseNumber: number) {
     const solution = exerciseSolutions.find(s => s.id === exerciseNumber);
     if (!solution) return;
 
+    // Get all user inputs
     const gevraagd = (document.getElementById(`ex${exerciseNumber}-gevraagd`) as HTMLSelectElement).value;
-    const gegevens = parseFloat((document.getElementById(`ex${exerciseNumber}-gegevens`) as HTMLInputElement).value.replace(',', '.'));
+    const gegevensInput = (document.getElementById(`ex${exerciseNumber}-gegevens`) as HTMLInputElement).value.replace(',', '.');
+    const gegevens = parseFloat(gegevensInput);
     const formule = (document.getElementById(`ex${exerciseNumber}-formule`) as HTMLSelectElement).value;
-    const antwoord = parseFloat((document.getElementById(`ex${exerciseNumber}-antwoord`) as HTMLInputElement).value.replace(',', '.'));
+    const antwoordInput = (document.getElementById(`ex${exerciseNumber}-antwoord`) as HTMLInputElement).value.replace(',', '.');
+    const antwoord = parseFloat(antwoordInput);
     const eenheid = (document.getElementById(`ex${exerciseNumber}-eenheid`) as HTMLSelectElement).value;
     const feedbackBox = document.getElementById(`feedback-ex${exerciseNumber}`) as HTMLDivElement;
 
-    const isCorrect = 
-        gevraagd === solution.gevraagd &&
-        Math.abs(gegevens - solution.gegevens) < 0.0001 &&
-        formule === solution.formule &&
-        Math.abs(antwoord - solution.antwoord) < 0.0001 &&
-        eenheid === solution.eenheid;
-
-    if (isCorrect) {
-        feedbackBox.textContent = 'Correct! Goed gedaan.';
-        feedbackBox.className = 'feedback-box correct';
-    } else {
-        feedbackBox.textContent = 'Niet helemaal juist, probeer het nog eens.';
-        feedbackBox.className = 'feedback-box incorrect';
+    const setFeedback = (message: string, type: 'correct' | 'incorrect') => {
+        feedbackBox.textContent = message;
+        feedbackBox.className = `feedback-box ${type}`;
+    };
+    
+    // Sequential validation with hints
+    if (gevraagd !== solution.gevraagd) {
+        setFeedback('Hint: Kijk nog eens goed: wordt er om de frequentie of de trillingstijd gevraagd?', 'incorrect');
+        return;
     }
+
+    if (isNaN(gegevens) || Math.abs(gegevens - solution.gegevens) > 0.0001) {
+        setFeedback('Hint: Welk getal uit de opgave moet je hier invullen?', 'incorrect');
+        return;
+    }
+    
+    if (formule !== solution.formule) {
+        setFeedback('Hint: Welke formule (f=1/T of T=1/f) past bij deze opgave?', 'incorrect');
+        return;
+    }
+
+    if (isNaN(antwoord) || Math.abs(antwoord - solution.antwoord) > 0.0001) {
+        setFeedback('Hint: Je berekening is nog niet juist. Gebruik de formule en de gegevens om het antwoord opnieuw te berekenen.', 'incorrect');
+        return;
+    }
+
+    if (eenheid !== solution.eenheid) {
+        setFeedback('Hint: Welke eenheid (Hz of s) hoort bij de berekende grootheid?', 'incorrect');
+        return;
+    }
+
+    // If all checks pass, it's correct
+    setFeedback('Correct! Goed gedaan.', 'correct');
 }
+
 
 
 // === Drawing Logic ===

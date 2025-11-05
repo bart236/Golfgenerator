@@ -14,6 +14,7 @@
             --wave-color: #00ffc3;
             --text-color: #e0e0e0;
             --success-color: #4caf50;
+            --error-color: #f44336;
             --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -37,9 +38,15 @@
         .page.active {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start; /* Align to top for scroll */
             align-items: center;
             animation: fadeIn 0.5s ease-in-out;
+            padding-top: 4rem; /* Space for back button */
+        }
+        
+        #landing-page.active {
+            justify-content: center; /* Center landing page content */
+            padding-top: 1rem;
         }
         
         @keyframes fadeIn {
@@ -50,12 +57,9 @@
         .container {
             text-align: center;
             width: 90%;
+            max-width: 900px;
         }
         
-        #landing-page .container, #game-selection-page .container {
-            max-width: 800px;
-        }
-
         h1 {
             color: var(--text-color);
             margin-bottom: 2rem;
@@ -133,7 +137,7 @@
         }
 
         .back-button {
-            position: absolute;
+            position: fixed; /* Keep it visible on scroll */
             top: 1rem;
             left: 1rem;
             background: var(--secondary-color);
@@ -145,7 +149,7 @@
             font-size: 1rem;
             font-weight: bold;
             transition: background-color 0.3s;
-            z-index: 10;
+            z-index: 100;
         }
         .back-button:hover {
             background: var(--accent-color);
@@ -373,6 +377,88 @@
             z-index: 25;
         }
 
+        /* Exercise Styles */
+        .exercise-container {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .exercise-card {
+            background: var(--primary-color);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid var(--secondary-color);
+        }
+
+        .exercise-card .question {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        .exercise-step {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .exercise-step label {
+            font-weight: bold;
+            text-align: right;
+            padding-right: 1rem;
+        }
+        
+        .exercise-input, .exercise-select {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border-radius: 5px;
+            border: 1px solid var(--secondary-color);
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        .answer-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .answer-group .exercise-input {
+            flex-grow: 1;
+        }
+
+        .answer-group .exercise-select {
+            flex-basis: 70px;
+            flex-grow: 0;
+        }
+        
+        .feedback-box {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            display: none; /* Hidden by default */
+        }
+        
+        .feedback-box.correct {
+            display: block;
+            background-color: var(--success-color);
+            color: #fff;
+        }
+        
+        .feedback-box.incorrect {
+            display: block;
+            background-color: var(--error-color);
+            color: #fff;
+        }
+
     </style>
 </head>
 <body>
@@ -391,6 +477,11 @@
                     <h2>Minigames</h2>
                     <p>Test je kennis met leuke, interactieve spellen.</p>
                 </div>
+                 <div class="tile" id="tile-exercises" role="button" tabindex="0" aria-label="Open de rekenopdrachten">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM6.5 18H8v-1.5H6.5V18zm0-3H8V12H6.5v3zm0-3H8V9H6.5v3zm0-3H8V6H6.5v3zm3.5 9H11v-1.5H10V18zm0-3H11V12H10v3zm0-3H11V9H10v3zm0-3H11V6H10v3zm6.5 6h-1.5v-1.5h-1.5V15H15v-1.5h1.5V12h-3V9h3c.83 0 1.5.67 1.5 1.5v3c0 .83-.67 1.5-1.5 1.5h-1.5v1.5H18V18h-1.5z"/></svg>
+                    <h2>Opdrachten</h2>
+                    <p>Pas je kennis toe met gerichte rekenopgaven.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -398,7 +489,7 @@
     <div id="game-selection-page" class="page">
         <button id="back-button-game-selection" class="back-button" aria-label="Terug naar hoofdmenu">&larr; Terug</button>
         <div class="container">
-            <h1 style="margin-top: 1.5rem; font-size: 2rem;">Kies een Spel</h1>
+            <h1 style="font-size: 2rem;">Kies een Spel</h1>
             <div class="tile-container">
                 <div class="tile" id="tile-toon-matchen" role="button" tabindex="0" aria-label="Start de 'Toon Matchen' minigame">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
@@ -411,6 +502,201 @@
                     <p>Gebruik je stemvolume om obstakels te ontwijken.</p>
                 </div>
             </div>
+        </div>
+    </div>
+    
+     <div id="exercise-selection-page" class="page">
+        <button id="back-button-exercise-selection" class="back-button" aria-label="Terug naar hoofdmenu">&larr; Terug</button>
+        <div class="container">
+            <h1 style="font-size: 2rem;">Kies een Niveau</h1>
+            <div class="tile-container">
+                <div class="tile" id="tile-level-basic" role="button" tabindex="0" aria-label="Start de basisopdrachten">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    <h2>Basis</h2>
+                    <p>Start met de fundamenten van frequentie en trillingstijd.</p>
+                </div>
+                <div class="tile" id="tile-level-challenging" role="button" tabindex="0" aria-label="Start de uitdagende opdrachten">
+                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                    <h2>Uitdagend</h2>
+                    <p>Test je vaardigheden met complexere vraagstukken.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="exercise-page-basic" class="page">
+        <button id="back-button-exercise-page-basic" class="back-button" aria-label="Terug naar niveauselectie">&larr; Terug</button>
+        <div class="container exercise-container">
+            <h1 style="font-size: 2rem;">Basis Oefeningen</h1>
+
+            <!-- Oefening 1 -->
+            <div class="exercise-card" id="exercise-1">
+                <p class="question">1. Een stemvork trilt met een trillingstijd van 0,004 seconde. Bereken de frequentie van het geluid dat deze stemvork produceert.</p>
+                <div class="exercise-step">
+                    <label for="ex1-gevraagd">Gevraagd:</label>
+                    <select id="ex1-gevraagd" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="frequentie">Frequentie</option>
+                        <option value="trillingstijd">Trillingstijd</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex1-gegevens">Gegevens:</label>
+                    <input type="text" id="ex1-gegevens" class="exercise-input" placeholder="Getal">
+                </div>
+                <div class="exercise-step">
+                    <label for="ex1-formule">Formule:</label>
+                    <select id="ex1-formule" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="f=1/T">f = 1/T</option>
+                        <option value="T=1/f">T = 1/f</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex1-berekening">Berekening:</label>
+                    <input type="text" id="ex1-berekening" class="exercise-input" placeholder="bv. 1 / 0.5">
+                </div>
+                 <div class="exercise-step">
+                    <label for="ex1-antwoord">Antwoord:</label>
+                    <div class="answer-group">
+                        <input type="text" id="ex1-antwoord" class="exercise-input" placeholder="Eindantwoord">
+                        <select id="ex1-eenheid" class="exercise-select">
+                            <option value="">Kies...</option>
+                            <option value="Hz">Hz</option>
+                            <option value="s">s</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="button check-button" data-exercise="1">Controleer</button>
+                <div class="feedback-box" id="feedback-ex1"></div>
+            </div>
+
+            <!-- Oefening 2 -->
+            <div class="exercise-card" id="exercise-2">
+                <p class="question">2. Een snaar van een gitaar trilt met een trillingstijd van 0,0025 seconde. Bereken de frequentie van de snaar.</p>
+                <div class="exercise-step">
+                    <label for="ex2-gevraagd">Gevraagd:</label>
+                    <select id="ex2-gevraagd" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="frequentie">Frequentie</option>
+                        <option value="trillingstijd">Trillingstijd</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex2-gegevens">Gegevens:</label>
+                    <input type="text" id="ex2-gegevens" class="exercise-input" placeholder="Getal">
+                </div>
+                <div class="exercise-step">
+                    <label for="ex2-formule">Formule:</label>
+                    <select id="ex2-formule" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="f=1/T">f = 1/T</option>
+                        <option value="T=1/f">T = 1/f</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex2-berekening">Berekening:</label>
+                    <input type="text" id="ex2-berekening" class="exercise-input" placeholder="bv. 1 / 0.5">
+                </div>
+                 <div class="exercise-step">
+                    <label for="ex2-antwoord">Antwoord:</label>
+                    <div class="answer-group">
+                        <input type="text" id="ex2-antwoord" class="exercise-input" placeholder="Eindantwoord">
+                        <select id="ex2-eenheid" class="exercise-select">
+                            <option value="">Kies...</option>
+                            <option value="Hz">Hz</option>
+                            <option value="s">s</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="button check-button" data-exercise="2">Controleer</button>
+                <div class="feedback-box" id="feedback-ex2"></div>
+            </div>
+
+            <!-- Oefening 3 -->
+            <div class="exercise-card" id="exercise-3">
+                <p class="question">3. Een lage bastoon heeft een trillingstijd van 0,01 seconde. Bereken de frequentie van de bastoon.</p>
+                 <div class="exercise-step">
+                    <label for="ex3-gevraagd">Gevraagd:</label>
+                    <select id="ex3-gevraagd" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="frequentie">Frequentie</option>
+                        <option value="trillingstijd">Trillingstijd</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex3-gegevens">Gegevens:</label>
+                    <input type="text" id="ex3-gegevens" class="exercise-input" placeholder="Getal">
+                </div>
+                <div class="exercise-step">
+                    <label for="ex3-formule">Formule:</label>
+                    <select id="ex3-formule" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="f=1/T">f = 1/T</option>
+                        <option value="T=1/f">T = 1/f</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex3-berekening">Berekening:</label>
+                    <input type="text" id="ex3-berekening" class="exercise-input" placeholder="bv. 1 / 0.5">
+                </div>
+                 <div class="exercise-step">
+                    <label for="ex3-antwoord">Antwoord:</label>
+                    <div class="answer-group">
+                        <input type="text" id="ex3-antwoord" class="exercise-input" placeholder="Eindantwoord">
+                        <select id="ex3-eenheid" class="exercise-select">
+                            <option value="">Kies...</option>
+                            <option value="Hz">Hz</option>
+                            <option value="s">s</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="button check-button" data-exercise="3">Controleer</button>
+                <div class="feedback-box" id="feedback-ex3"></div>
+            </div>
+            
+            <!-- Oefening 4 -->
+            <div class="exercise-card" id="exercise-4">
+                <p class="question">4. Een hoge toon heeft een frequentie van 1250 Hz. Bereken de trillingstijd.</p>
+                <div class="exercise-step">
+                   <label for="ex4-gevraagd">Gevraagd:</label>
+                   <select id="ex4-gevraagd" class="exercise-select">
+                       <option value="">Kies...</option>
+                       <option value="frequentie">Frequentie</option>
+                       <option value="trillingstijd">Trillingstijd</option>
+                   </select>
+               </div>
+               <div class="exercise-step">
+                   <label for="ex4-gegevens">Gegevens:</label>
+                   <input type="text" id="ex4-gegevens" class="exercise-input" placeholder="Getal">
+               </div>
+               <div class="exercise-step">
+                   <label for="ex4-formule">Formule:</label>
+                   <select id="ex4-formule" class="exercise-select">
+                       <option value="">Kies...</option>
+                       <option value="f=1/T">f = 1/T</option>
+                       <option value="T=1/f">T = 1/f</option>
+                   </select>
+               </div>
+               <div class="exercise-step">
+                   <label for="ex4-berekening">Berekening:</label>
+                   <input type="text" id="ex4-berekening" class="exercise-input" placeholder="bv. 1 / 1000">
+               </div>
+                <div class="exercise-step">
+                   <label for="ex4-antwoord">Antwoord:</label>
+                   <div class="answer-group">
+                       <input type="text" id="ex4-antwoord" class="exercise-input" placeholder="Eindantwoord">
+                       <select id="ex4-eenheid" class="exercise-select">
+                           <option value="">Kies...</option>
+                           <option value="Hz">Hz</option>
+                           <option value="s">s</option>
+                       </select>
+                   </div>
+               </div>
+               <button class="button check-button" data-exercise="4">Controleer</button>
+               <div class="feedback-box" id="feedback-ex4"></div>
+           </div>
+
         </div>
     </div>
 

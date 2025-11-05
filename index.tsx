@@ -43,16 +43,25 @@ const explorerApp = document.getElementById('explorer-app') as HTMLDivElement;
 const gameSelectionPage = document.getElementById('game-selection-page') as HTMLDivElement;
 const gamePage = document.getElementById('game-page') as HTMLDivElement;
 const amplitudeGamePage = document.getElementById('amplitude-game-page') as HTMLDivElement;
+const exerciseSelectionPage = document.getElementById('exercise-selection-page') as HTMLDivElement;
+const exercisePageBasic = document.getElementById('exercise-page-basic') as HTMLDivElement;
+
 
 // Navigation
 const tileExplorer = document.getElementById('tile-explorer') as HTMLDivElement;
 const tileGames = document.getElementById('tile-games') as HTMLDivElement;
+const tileExercises = document.getElementById('tile-exercises') as HTMLDivElement;
 const tileToonMatchen = document.getElementById('tile-toon-matchen') as HTMLDivElement;
 const tileAmplitudeParcours = document.getElementById('tile-amplitude-parcours') as HTMLDivElement;
+const tileLevelBasic = document.getElementById('tile-level-basic') as HTMLDivElement;
 const backButtonExplorer = document.getElementById('back-button-explorer') as HTMLButtonElement;
 const backButtonGameSelection = document.getElementById('back-button-game-selection') as HTMLButtonElement;
 const backButtonGame = document.getElementById('back-button-game') as HTMLButtonElement;
 const backButtonAmplitudeGame = document.getElementById('back-button-amplitude-game') as HTMLButtonElement;
+const backButtonExerciseSelection = document.getElementById('back-button-exercise-selection') as HTMLButtonElement;
+const backButtonExercisePageBasic = document.getElementById('back-button-exercise-page-basic') as HTMLButtonElement;
+
+const allPages = [landingPage, explorerApp, gameSelectionPage, gamePage, amplitudeGamePage, exerciseSelectionPage, exercisePageBasic];
 
 
 // Explorer App Elements
@@ -83,41 +92,45 @@ const amplitudeGameOverlay = document.getElementById('amplitude-game-overlay') a
 const amplitudeGameMessage = document.getElementById('amplitude-game-message') as HTMLHeadingElement;
 const amplitudeRestartButton = document.getElementById('amplitude-restart-button') as HTMLButtonElement;
 
+// Exercise Elements
+const checkButtons = document.querySelectorAll('.check-button');
+
 
 // === Navigation ===
+function navigateTo(pageToShow: HTMLElement) {
+    allPages.forEach(page => page.classList.remove('active'));
+    pageToShow.classList.add('active');
+    window.scrollTo(0, 0); // Scroll to top on page change
+}
+
 function showExplorer() {
-    landingPage.classList.remove('active');
-    gameSelectionPage.classList.remove('active');
-    explorerApp.classList.add('active');
+    navigateTo(explorerApp);
 }
 
 function showGameSelectionPage() {
-    landingPage.classList.remove('active');
-    explorerApp.classList.remove('active');
-    gamePage.classList.remove('active');
-    amplitudeGamePage.classList.remove('active');
-    gameSelectionPage.classList.add('active');
-    
+    navigateTo(gameSelectionPage);
     // Stop any active games
     isToonMatchenActive = false;
     isAmplitudeGameActive = false;
+}
 
-    // A single back button on a game page might have brought us here,
-    // but the microphone might still be needed if the user selects the other game.
-    // So we don't stop the mic here, only when returning to the landing page.
+function showExerciseSelectionPage() {
+    navigateTo(exerciseSelectionPage);
+}
+
+function showExercisePageBasic() {
+    navigateTo(exercisePageBasic);
 }
 
 async function showGamePage() { // Toon Matchen
-    gameSelectionPage.classList.remove('active');
-    gamePage.classList.add('active');
+    navigateTo(gamePage);
     isToonMatchenActive = true;
     startNewChallenge();
     await startMicIfNeeded();
 }
 
 async function showAmplitudeGamePage() {
-    gameSelectionPage.classList.remove('active');
-    amplitudeGamePage.classList.add('active');
+    navigateTo(amplitudeGamePage);
     isAmplitudeGameActive = true;
     resetAmplitudeGame();
     await startMicIfNeeded();
@@ -128,11 +141,7 @@ function showLandingPage() {
     if (isPlaying) togglePlayback();
     if (isListening) toggleMicrophone(); // Stops mic and resets state
 
-    explorerApp.classList.remove('active');
-    gamePage.classList.remove('active');
-    gameSelectionPage.classList.remove('active');
-    amplitudeGamePage.classList.remove('active');
-    landingPage.classList.add('active');
+    navigateTo(landingPage);
     
     isToonMatchenActive = false;
     isAmplitudeGameActive = false;
@@ -401,6 +410,42 @@ function updateAmplitudeGameState() {
 }
 
 
+// === Exercise Logic ===
+const exerciseSolutions = [
+    { id: 1, gevraagd: 'frequentie', gegevens: 0.004, formule: 'f=1/T', antwoord: 250, eenheid: 'Hz' },
+    { id: 2, gevraagd: 'frequentie', gegevens: 0.0025, formule: 'f=1/T', antwoord: 400, eenheid: 'Hz' },
+    { id: 3, gevraagd: 'frequentie', gegevens: 0.01, formule: 'f=1/T', antwoord: 100, eenheid: 'Hz' },
+    { id: 4, gevraagd: 'trillingstijd', gegevens: 1250, formule: 'T=1/f', antwoord: 0.0008, eenheid: 's' }
+];
+
+function checkExercise(exerciseNumber: number) {
+    const solution = exerciseSolutions.find(s => s.id === exerciseNumber);
+    if (!solution) return;
+
+    const gevraagd = (document.getElementById(`ex${exerciseNumber}-gevraagd`) as HTMLSelectElement).value;
+    const gegevens = parseFloat((document.getElementById(`ex${exerciseNumber}-gegevens`) as HTMLInputElement).value.replace(',', '.'));
+    const formule = (document.getElementById(`ex${exerciseNumber}-formule`) as HTMLSelectElement).value;
+    const antwoord = parseFloat((document.getElementById(`ex${exerciseNumber}-antwoord`) as HTMLInputElement).value.replace(',', '.'));
+    const eenheid = (document.getElementById(`ex${exerciseNumber}-eenheid`) as HTMLSelectElement).value;
+    const feedbackBox = document.getElementById(`feedback-ex${exerciseNumber}`) as HTMLDivElement;
+
+    const isCorrect = 
+        gevraagd === solution.gevraagd &&
+        Math.abs(gegevens - solution.gegevens) < 0.0001 &&
+        formule === solution.formule &&
+        Math.abs(antwoord - solution.antwoord) < 0.0001 &&
+        eenheid === solution.eenheid;
+
+    if (isCorrect) {
+        feedbackBox.textContent = 'Correct! Goed gedaan.';
+        feedbackBox.className = 'feedback-box correct';
+    } else {
+        feedbackBox.textContent = 'Niet helemaal juist, probeer het nog eens.';
+        feedbackBox.className = 'feedback-box incorrect';
+    }
+}
+
+
 // === Drawing Logic ===
 function resizeCanvasIfNeeded(canvasEl: HTMLCanvasElement): boolean {
     const dpr = window.devicePixelRatio || 1;
@@ -557,14 +602,21 @@ function setupEventListeners() {
     // Navigation
     tileExplorer.addEventListener('click', showExplorer);
     tileGames.addEventListener('click', showGameSelectionPage);
+    tileExercises.addEventListener('click', showExerciseSelectionPage);
     backButtonExplorer.addEventListener('click', showLandingPage);
     backButtonGameSelection.addEventListener('click', showLandingPage);
+    backButtonExerciseSelection.addEventListener('click', showLandingPage);
     backButtonGame.addEventListener('click', showGameSelectionPage);
     backButtonAmplitudeGame.addEventListener('click', showGameSelectionPage);
+    backButtonExercisePageBasic.addEventListener('click', showExerciseSelectionPage);
+
 
     // Game Selection
     tileToonMatchen.addEventListener('click', showGamePage);
     tileAmplitudeParcours.addEventListener('click', showAmplitudeGamePage);
+
+    // Exercise Selection
+    tileLevelBasic.addEventListener('click', showExercisePageBasic);
 
     // Explorer controls
     frequencySlider.addEventListener('input', (e) => {
@@ -585,6 +637,14 @@ function setupEventListeners() {
             resetAmplitudeGame();
             startGame();
         }
+    });
+
+    // Exercise Controls
+    checkButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const exerciseNumber = parseInt((e.target as HTMLButtonElement).dataset.exercise!);
+            checkExercise(exerciseNumber);
+        });
     });
 }
 

@@ -696,7 +696,73 @@
                <button class="button check-button" data-exercise="4">Controleer</button>
                <div class="feedback-box" id="feedback-ex4"></div>
            </div>
+        </div>
+    </div>
+    
+    <div id="exercise-page-challenging" class="page">
+        <button id="back-button-exercise-page-challenging" class="back-button" aria-label="Terug naar niveauselectie">&larr; Terug</button>
+        <div class="container exercise-container">
+            <h1 style="font-size: 2rem;">Uitdagende Oefeningen</h1>
 
+            <!-- Oefening 1 -->
+            <div class="exercise-card" id="exercise-challenging-1">
+                <p class="question">1. In de afbeelding zie je een golf.</p>
+                <img id="challenging-exercise-image" src="" alt="Grafiek van een geluidsgolf" style="width: 100%; max-width: 400px; border-radius: 8px; margin-bottom: 1rem;">
+                
+                <p class="question" style="font-weight: bold;">a. Bepaal de trillingstijd van de golf.</p>
+                <div class="exercise-step">
+                    <label for="ex-challenging1a-antwoord">Antwoord:</label>
+                    <div class="answer-group">
+                        <input type="text" id="ex-challenging1a-antwoord" class="exercise-input" placeholder="Getal">
+                        <select id="ex-challenging1a-eenheid" class="exercise-select">
+                            <option value="">Kies...</option>
+                            <option value="s">s</option>
+                            <option value="ms">ms</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <hr style="border-color: var(--secondary-color); margin: 2rem 0;">
+
+                <p class="question" style="font-weight: bold;">b. Bereken de frequentie van deze trilling.</p>
+                 <div class="exercise-step">
+                    <label for="ex-challenging1b-gevraagd">Gevraagd:</label>
+                    <select id="ex-challenging1b-gevraagd" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="frequentie">Frequentie</option>
+                        <option value="trillingstijd">Trillingstijd</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex-challenging1b-gegevens">Gegevens:</label>
+                    <input type="text" id="ex-challenging1b-gegevens" class="exercise-input" placeholder="Gebruik antwoord a in s">
+                </div>
+                <div class="exercise-step">
+                    <label for="ex-challenging1b-formule">Formule:</label>
+                    <select id="ex-challenging1b-formule" class="exercise-select">
+                        <option value="">Kies...</option>
+                        <option value="f=1/T">f = 1/T</option>
+                        <option value="T=1/f">T = 1/f</option>
+                    </select>
+                </div>
+                <div class="exercise-step">
+                    <label for="ex-challenging1b-berekening">Berekening:</label>
+                    <input type="text" id="ex-challenging1b-berekening" class="exercise-input" placeholder="bv. 1 / 0.5">
+                </div>
+                 <div class="exercise-step">
+                    <label for="ex-challenging1b-antwoord">Antwoord:</label>
+                    <div class="answer-group">
+                        <input type="text" id="ex-challenging1b-antwoord" class="exercise-input" placeholder="Eindantwoord">
+                        <select id="ex-challenging1b-eenheid" class="exercise-select">
+                            <option value="">Kies...</option>
+                            <option value="Hz">Hz</option>
+                            <option value="s">s</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="button check-button" data-exercise="challenging-1">Controleer</button>
+                <div class="feedback-box" id="feedback-ex-challenging-1"></div>
+            </div>
         </div>
     </div>
 

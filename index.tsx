@@ -35,6 +35,8 @@ const player = {
     radius: 12
 };
 
+// De URL naar de afbeelding in de repository.
+const challengingImageUrl = "https://raw.githubusercontent.com/bart236/Golfgenerator/2d2b99e60d36b8b80125f6c0257c3593ff06b847/EB6.1_opg%203.png";
 
 // === DOM Elements ===
 // Pages
@@ -45,6 +47,7 @@ const gamePage = document.getElementById('game-page') as HTMLDivElement;
 const amplitudeGamePage = document.getElementById('amplitude-game-page') as HTMLDivElement;
 const exerciseSelectionPage = document.getElementById('exercise-selection-page') as HTMLDivElement;
 const exercisePageBasic = document.getElementById('exercise-page-basic') as HTMLDivElement;
+const exercisePageChallenging = document.getElementById('exercise-page-challenging') as HTMLDivElement;
 
 
 // Navigation
@@ -54,14 +57,16 @@ const tileExercises = document.getElementById('tile-exercises') as HTMLDivElemen
 const tileToonMatchen = document.getElementById('tile-toon-matchen') as HTMLDivElement;
 const tileAmplitudeParcours = document.getElementById('tile-amplitude-parcours') as HTMLDivElement;
 const tileLevelBasic = document.getElementById('tile-level-basic') as HTMLDivElement;
+const tileLevelChallenging = document.getElementById('tile-level-challenging') as HTMLDivElement;
 const backButtonExplorer = document.getElementById('back-button-explorer') as HTMLButtonElement;
 const backButtonGameSelection = document.getElementById('back-button-game-selection') as HTMLButtonElement;
 const backButtonGame = document.getElementById('back-button-game') as HTMLButtonElement;
 const backButtonAmplitudeGame = document.getElementById('back-button-amplitude-game') as HTMLButtonElement;
 const backButtonExerciseSelection = document.getElementById('back-button-exercise-selection') as HTMLButtonElement;
 const backButtonExercisePageBasic = document.getElementById('back-button-exercise-page-basic') as HTMLButtonElement;
+const backButtonExercisePageChallenging = document.getElementById('back-button-exercise-page-challenging') as HTMLButtonElement;
 
-const allPages = [landingPage, explorerApp, gameSelectionPage, gamePage, amplitudeGamePage, exerciseSelectionPage, exercisePageBasic];
+const allPages = [landingPage, explorerApp, gameSelectionPage, gamePage, amplitudeGamePage, exerciseSelectionPage, exercisePageBasic, exercisePageChallenging];
 
 
 // Explorer App Elements
@@ -94,6 +99,7 @@ const amplitudeRestartButton = document.getElementById('amplitude-restart-button
 
 // Exercise Elements
 const checkButtons = document.querySelectorAll('.check-button');
+const challengingExerciseImage = document.getElementById('challenging-exercise-image') as HTMLImageElement;
 
 
 // === Navigation ===
@@ -120,6 +126,13 @@ function showExerciseSelectionPage() {
 
 function showExercisePageBasic() {
     navigateTo(exercisePageBasic);
+}
+
+function showExercisePageChallenging() {
+    navigateTo(exercisePageChallenging);
+    if(challengingExerciseImage.src !== challengingImageUrl) {
+        challengingExerciseImage.src = challengingImageUrl;
+    }
 }
 
 async function showGamePage() { // Toon Matchen
@@ -418,6 +431,75 @@ const exerciseSolutions = [
     { id: 4, gevraagd: 'trillingstijd', gegevens: 1250, formule: 'T=1/f', antwoord: 0.0008, eenheid: 's' }
 ];
 
+const challengingExerciseSolutions = [
+    { 
+        id: 'challenging-1',
+        a_antwoord_ms: 40,
+        a_antwoord_s: 0.04,
+        b_gevraagd: 'frequentie',
+        b_gegevens: 0.04,
+        b_formule: 'f=1/T',
+        b_antwoord: 25,
+        b_eenheid: 'Hz'
+    }
+];
+
+function checkChallengingExercise(exerciseId: string) {
+    const solution = challengingExerciseSolutions.find(s => s.id === exerciseId);
+    if (!solution) return;
+    
+    const feedbackBox = document.getElementById(`feedback-ex-${exerciseId}`) as HTMLDivElement;
+    const setFeedback = (message: string, type: 'correct' | 'incorrect') => {
+        feedbackBox.textContent = message;
+        feedbackBox.className = `feedback-box ${type}`;
+    };
+
+    // Part A validation
+    const antwoordAInput = (document.getElementById('ex-challenging1a-antwoord') as HTMLInputElement).value.replace(',', '.');
+    const antwoordA = parseFloat(antwoordAInput);
+    const eenheidA = (document.getElementById('ex-challenging1a-eenheid') as HTMLSelectElement).value;
+
+    const isPartACorrect = (antwoordA === solution.a_antwoord_ms && eenheidA === 'ms') || (Math.abs(antwoordA - solution.a_antwoord_s) < 0.0001 && eenheidA === 's');
+
+    if (!isPartACorrect) {
+        setFeedback('Hint (a): Kijk naar de schaalverdeling (10 ms per hokje). Hoeveel hokjes duurt één volledige golf?', 'incorrect');
+        return;
+    }
+
+    // Part B validation
+    const gevraagdB = (document.getElementById(`ex-challenging1b-gevraagd`) as HTMLSelectElement).value;
+    const gegevensBInput = (document.getElementById(`ex-challenging1b-gegevens`) as HTMLInputElement).value.replace(',', '.');
+    const gegevensB = parseFloat(gegevensBInput);
+    const formuleB = (document.getElementById(`ex-challenging1b-formule`) as HTMLSelectElement).value;
+    const antwoordBInput = (document.getElementById(`ex-challenging1b-antwoord`) as HTMLInputElement).value.replace(',', '.');
+    const antwoordB = parseFloat(antwoordBInput);
+    const eenheidB = (document.getElementById(`ex-challenging1b-eenheid`) as HTMLSelectElement).value;
+
+    if (gevraagdB !== solution.b_gevraagd) {
+        setFeedback('Hint (b): Wat moet je berekenen in opgave b?', 'incorrect');
+        return;
+    }
+    if (isNaN(gegevensB) || Math.abs(gegevensB - solution.b_gegevens) > 0.0001) {
+        setFeedback('Hint (b): Welk gegeven (in seconden) moet je gebruiken uit opgave a?', 'incorrect');
+        return;
+    }
+    if (formuleB !== solution.b_formule) {
+        setFeedback('Hint (b): Welke formule past bij deze opgave?', 'incorrect');
+        return;
+    }
+    if (isNaN(antwoordB) || Math.abs(antwoordB - solution.b_antwoord) > 0.001) {
+        setFeedback('Hint (b): Je berekening is nog niet juist.', 'incorrect');
+        return;
+    }
+    if (eenheidB !== solution.b_eenheid) {
+        setFeedback('Hint (b): Welke eenheid hoort bij de berekende grootheid?', 'incorrect');
+        return;
+    }
+
+    setFeedback('Helemaal correct! Uitstekend werk.', 'correct');
+}
+
+
 function checkExercise(exerciseNumber: number) {
     const solution = exerciseSolutions.find(s => s.id === exerciseNumber);
     if (!solution) return;
@@ -632,6 +714,7 @@ function setupEventListeners() {
     backButtonGame.addEventListener('click', showGameSelectionPage);
     backButtonAmplitudeGame.addEventListener('click', showGameSelectionPage);
     backButtonExercisePageBasic.addEventListener('click', showExerciseSelectionPage);
+    backButtonExercisePageChallenging.addEventListener('click', showExerciseSelectionPage);
 
 
     // Game Selection
@@ -640,6 +723,7 @@ function setupEventListeners() {
 
     // Exercise Selection
     tileLevelBasic.addEventListener('click', showExercisePageBasic);
+    tileLevelChallenging.addEventListener('click', showExercisePageChallenging);
 
     // Explorer controls
     frequencySlider.addEventListener('input', (e) => {
@@ -665,8 +749,12 @@ function setupEventListeners() {
     // Exercise Controls
     checkButtons.forEach(button => {
         button.addEventListener('click', (e) => {
-            const exerciseNumber = parseInt((e.target as HTMLButtonElement).dataset.exercise!);
-            checkExercise(exerciseNumber);
+            const exerciseId = (e.target as HTMLButtonElement).dataset.exercise!;
+            if (exerciseId.startsWith('challenging')) {
+                checkChallengingExercise(exerciseId);
+            } else {
+                checkExercise(parseInt(exerciseId));
+            }
         });
     });
 }

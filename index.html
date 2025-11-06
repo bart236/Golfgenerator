@@ -131,7 +131,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             text-align: center;
             width: 90%;
-            max-width: 600px;
+            max-width: 800px; /* Increased max-width for wider keyboard */
             border: 1px solid var(--secondary-color);
             position: relative;
         }
@@ -459,6 +459,86 @@
             color: #fff;
         }
 
+        /* Keyboard Styles */
+        .keyboard-info-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            width: 100%;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .keyboard-info-controls .info-box {
+            flex-grow: 1;
+        }
+
+        .octave-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .octave-controls .button {
+            padding: 0.5rem;
+            font-size: 1.5rem;
+            line-height: 1;
+            width: 45px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        #keyboard-container {
+            display: flex;
+            position: relative;
+            height: 150px;
+            margin-top: 1rem;
+            width: 100%;
+            border: 2px solid var(--secondary-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .key {
+            border: 1px solid #333;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        .key.white {
+            width: calc(100% / 13); /* 13 white keys */
+            height: 100%;
+            background-color: #fff;
+            z-index: 1;
+            border-top: none;
+        }
+        .key.white.active, .key.white:active {
+            background-color: #ddd;
+        }
+
+        .key.black {
+            width: calc(100% / 13 * 0.6); /* 60% of a white key's width */
+            height: 60%;
+            background-color: #222;
+            position: absolute;
+            z-index: 2;
+            border-radius: 0 0 5px 5px;
+        }
+        .key.black.active, .key.black:active {
+            background-color: #444;
+        }
+
+        /* Positioning black keys based on 13 white keys. Position = (N - 0.3) * white_key_width */
+        .key[data-note="G#3"] { left: calc(0.7 * (100% / 13)); }
+        .key[data-note="A#3"] { left: calc(1.7 * (100% / 13)); }
+        .key[data-note="C#4"] { left: calc(3.7 * (100% / 13)); }
+        .key[data-note="D#4"] { left: calc(4.7 * (100% / 13)); }
+        .key[data-note="F#4"] { left: calc(6.7 * (100% / 13)); }
+        .key[data-note="G#4"] { left: calc(7.7 * (100% / 13)); }
+        .key[data-note="A#4"] { left: calc(8.7 * (100% / 13)); }
+        .key[data-note="C#5"] { left: calc(10.7 * (100% / 13)); }
+        .key[data-note="D#5"] { left: calc(11.7 * (100% / 13)); }
+
     </style>
 </head>
 <body>
@@ -500,6 +580,11 @@
                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                     <h2>Amplitude Parcours</h2>
                     <p>Gebruik je stemvolume om obstakels te ontwijken.</p>
+                </div>
+                <div class="tile" id="tile-keyboard" role="button" tabindex="0" aria-label="Start het 'Keyboard' spel">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM8 18H6v-4h2v4zm4 0h-2v-4h2v4zm4 0h-2v-4h2v4zm0-6H4V6h16v6z"/></svg>
+                    <h2>Keyboard</h2>
+                    <p>Speel tonen en zie de golfvorm veranderen.</p>
                 </div>
             </div>
         </div>
@@ -841,6 +926,56 @@
                     <button id="amplitude-restart-button" class="button">Start</button>
                  </div>
              </div>
+        </div>
+    </div>
+    
+    <div id="keyboard-page" class="page">
+        <div class="app-container">
+             <button id="back-button-keyboard" class="back-button" aria-label="Terug naar spelmenu">&larr; Terug</button>
+             <h1 style="margin-top: 1.5rem; font-size: 2rem;">Keyboard</h1>
+             <p style="margin-top: -1.5rem; margin-bottom: 1.5rem; opacity: 0.8;">Klik op de toetsen om een toon te spelen.</p>
+             <canvas id="keyboard-canvas" class="canvas"></canvas>
+             <div class="keyboard-info-controls">
+                <div class="info-box">
+                    <div class="label">Frequentie</div>
+                    <div class="value" id="keyboard-frequency-display" style="color: var(--wave-color);">0 Hz</div>
+                </div>
+                <div class="octave-controls">
+                    <button id="octave-down-button" class="button" aria-label="Octaaf omlaag">-</button>
+                    <div class="info-box">
+                        <div class="label">Octaaf (Midden C)</div>
+                        <div class="value" id="octave-display">4</div>
+                    </div>
+                    <button id="octave-up-button" class="button" aria-label="Octaaf omhoog">+</button>
+                </div>
+            </div>
+             <div id="keyboard-container">
+                <!-- Lower Octave -->
+                <div class="key white" data-note="G3"></div>
+                <div class="key black" data-note="G#3"></div>
+                <div class="key white" data-note="A3"></div>
+                <div class="key black" data-note="A#3"></div>
+                <div class="key white" data-note="B3"></div>
+                <!-- Middle Octave -->
+                <div class="key white" data-note="C4"></div>
+                <div class="key black" data-note="C#4"></div>
+                <div class="key white" data-note="D4"></div>
+                <div class="key black" data-note="D#4"></div>
+                <div class="key white" data-note="E4"></div>
+                <div class="key white" data-note="F4"></div>
+                <div class="key black" data-note="F#4"></div>
+                <div class="key white" data-note="G4"></div>
+                <div class="key black" data-note="G#4"></div>
+                <div class="key white" data-note="A4"></div>
+                <div class="key black" data-note="A#4"></div>
+                <div class="key white" data-note="B4"></div>
+                <!-- Higher Octave -->
+                <div class="key white" data-note="C5"></div>
+                <div class="key black" data-note="C#5"></div>
+                <div class="key white" data-note="D5"></div>
+                <div class="key black" data-note="D#5"></div>
+                <div class="key white" data-note="E5"></div>
+            </div>
         </div>
     </div>
 

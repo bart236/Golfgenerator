@@ -1,3 +1,4 @@
+
 import React from "https://esm.sh/react";
 import ReactDOM from "https://esm.sh/react-dom";
 
@@ -35,6 +36,22 @@ const player = {
     radius: 12
 };
 
+// Keyboard Game State
+let isKeyboardActive = false;
+let keyboardOscillator: OscillatorNode | null = null;
+let keyboardGainNode: GainNode | null = null;
+let currentKeyboardFrequency = 0;
+let octaveOffset = 0;
+const MIDDLE_C_OCTAVE = 4;
+const MIN_OFFSET = -2;
+const MAX_OFFSET = 2;
+const NOTE_FREQUENCIES_OCTAVE_4: { [key: string]: number } = {
+    'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13, 'E': 329.63,
+    'F': 349.23, 'F#': 369.99, 'G': 392.00, 'G#': 415.30, 'A': 440.00,
+    'A#': 466.16, 'B': 493.88
+};
+
+
 // De URL naar de afbeelding in de repository.
 const challengingImageUrl = "https://raw.githubusercontent.com/bart236/Golfgenerator/2d2b99e60d36b8b80125f6c0257c3593ff06b847/EB6.1_opg%203.png";
 
@@ -45,6 +62,7 @@ const explorerApp = document.getElementById('explorer-app') as HTMLDivElement;
 const gameSelectionPage = document.getElementById('game-selection-page') as HTMLDivElement;
 const gamePage = document.getElementById('game-page') as HTMLDivElement;
 const amplitudeGamePage = document.getElementById('amplitude-game-page') as HTMLDivElement;
+const keyboardPage = document.getElementById('keyboard-page') as HTMLDivElement;
 const exerciseSelectionPage = document.getElementById('exercise-selection-page') as HTMLDivElement;
 const exercisePageBasic = document.getElementById('exercise-page-basic') as HTMLDivElement;
 const exercisePageChallenging = document.getElementById('exercise-page-challenging') as HTMLDivElement;
@@ -56,17 +74,19 @@ const tileGames = document.getElementById('tile-games') as HTMLDivElement;
 const tileExercises = document.getElementById('tile-exercises') as HTMLDivElement;
 const tileToonMatchen = document.getElementById('tile-toon-matchen') as HTMLDivElement;
 const tileAmplitudeParcours = document.getElementById('tile-amplitude-parcours') as HTMLDivElement;
+const tileKeyboard = document.getElementById('tile-keyboard') as HTMLDivElement;
 const tileLevelBasic = document.getElementById('tile-level-basic') as HTMLDivElement;
 const tileLevelChallenging = document.getElementById('tile-level-challenging') as HTMLDivElement;
 const backButtonExplorer = document.getElementById('back-button-explorer') as HTMLButtonElement;
 const backButtonGameSelection = document.getElementById('back-button-game-selection') as HTMLButtonElement;
 const backButtonGame = document.getElementById('back-button-game') as HTMLButtonElement;
 const backButtonAmplitudeGame = document.getElementById('back-button-amplitude-game') as HTMLButtonElement;
+const backButtonKeyboard = document.getElementById('back-button-keyboard') as HTMLButtonElement;
 const backButtonExerciseSelection = document.getElementById('back-button-exercise-selection') as HTMLButtonElement;
 const backButtonExercisePageBasic = document.getElementById('back-button-exercise-page-basic') as HTMLButtonElement;
 const backButtonExercisePageChallenging = document.getElementById('back-button-exercise-page-challenging') as HTMLButtonElement;
 
-const allPages = [landingPage, explorerApp, gameSelectionPage, gamePage, amplitudeGamePage, exerciseSelectionPage, exercisePageBasic, exercisePageChallenging];
+const allPages = [landingPage, explorerApp, gameSelectionPage, gamePage, amplitudeGamePage, exerciseSelectionPage, exercisePageBasic, exercisePageChallenging, keyboardPage];
 
 
 // Explorer App Elements
@@ -97,6 +117,15 @@ const amplitudeGameOverlay = document.getElementById('amplitude-game-overlay') a
 const amplitudeGameMessage = document.getElementById('amplitude-game-message') as HTMLHeadingElement;
 const amplitudeRestartButton = document.getElementById('amplitude-restart-button') as HTMLButtonElement;
 
+// Keyboard Game Elements
+const keyboardCanvas = document.getElementById('keyboard-canvas') as HTMLCanvasElement;
+const keyboardCtx = keyboardCanvas.getContext('2d')!;
+const keyboardFrequencyDisplay = document.getElementById('keyboard-frequency-display') as HTMLSpanElement;
+const keyboardContainer = document.getElementById('keyboard-container') as HTMLDivElement;
+const octaveDownButton = document.getElementById('octave-down-button') as HTMLButtonElement;
+const octaveUpButton = document.getElementById('octave-up-button') as HTMLButtonElement;
+const octaveDisplay = document.getElementById('octave-display') as HTMLSpanElement;
+
 // Exercise Elements
 const checkButtons = document.querySelectorAll('.check-button');
 const challengingExerciseImage = document.getElementById('challenging-exercise-image') as HTMLImageElement;
@@ -118,6 +147,10 @@ function showGameSelectionPage() {
     // Stop any active games
     isToonMatchenActive = false;
     isAmplitudeGameActive = false;
+    if (isKeyboardActive) {
+        stopKeyboardNote();
+        isKeyboardActive = false;
+    }
 }
 
 function showExerciseSelectionPage() {
@@ -149,6 +182,11 @@ async function showAmplitudeGamePage() {
     await startMicIfNeeded();
 }
 
+function showKeyboardPage() {
+    navigateTo(keyboardPage);
+    isKeyboardActive = true;
+}
+
 
 function showLandingPage() {
     if (isPlaying) togglePlayback();
@@ -158,6 +196,10 @@ function showLandingPage() {
     
     isToonMatchenActive = false;
     isAmplitudeGameActive = false;
+    if (isKeyboardActive) {
+        stopKeyboardNote();
+        isKeyboardActive = false;
+    }
     if (winTimeout) clearTimeout(winTimeout);
     winTimeout = null;
 }
@@ -275,6 +317,77 @@ async function toggleMicrophone() { // Only used in explorer now
     }
 }
 
+// === Keyboard Audio ===
+function updateKeyFrequencies() {
+    const keys = keyboardContainer.querySelectorAll<HTMLElement>('.key');
+    keys.forEach(key => {
+        const noteData = key.dataset.note;
+        if (noteData) {
+            // Regex to parse note name (e.g., C, F#) and octave number
+            const match = noteData.match(/([A-G]#?)([0-9])/);
+            if (match) {
+                const noteName = match[1];
+                const baseOctaveOfNote = parseInt(match[2]);
+                
+                const baseFrequency = NOTE_FREQUENCIES_OCTAVE_4[noteName];
+                if (baseFrequency) {
+                    // Calculate the frequency based on its own octave, the global offset, and the reference octave (4)
+                    const targetOctave = baseOctaveOfNote + octaveOffset;
+                    const newFrequency = baseFrequency * Math.pow(2, targetOctave - MIDDLE_C_OCTAVE);
+                    key.dataset.freq = newFrequency.toString();
+                }
+            }
+        }
+    });
+    // Display the octave of Middle C
+    octaveDisplay.textContent = `${MIDDLE_C_OCTAVE + octaveOffset}`;
+    octaveDownButton.disabled = octaveOffset <= MIN_OFFSET;
+    octaveUpButton.disabled = octaveOffset >= MAX_OFFSET;
+}
+
+function playKeyboardNote(frequency: number) {
+    initializeAudio();
+    if (audioContext!.state === 'suspended') {
+        audioContext!.resume();
+    }
+
+    // Stop any previous note cleanly
+    stopKeyboardNote();
+
+    currentKeyboardFrequency = frequency;
+    keyboardFrequencyDisplay.textContent = `${Math.round(frequency)} Hz`;
+
+    keyboardOscillator = audioContext!.createOscillator();
+    keyboardGainNode = audioContext!.createGain();
+
+    keyboardOscillator.connect(keyboardGainNode);
+    keyboardGainNode.connect(audioContext!.destination);
+
+    keyboardOscillator.type = 'sine';
+    keyboardOscillator.frequency.setValueAtTime(frequency, audioContext!.currentTime);
+    
+    // Attack envelope to prevent click
+    keyboardGainNode.gain.setValueAtTime(0, audioContext!.currentTime);
+    keyboardGainNode.gain.linearRampToValueAtTime(0.5, audioContext!.currentTime + 0.01); 
+    
+    keyboardOscillator.start();
+}
+
+function stopKeyboardNote() {
+    if (keyboardGainNode) {
+        // Release envelope to prevent click
+        keyboardGainNode.gain.cancelScheduledValues(audioContext!.currentTime);
+        keyboardGainNode.gain.linearRampToValueAtTime(0, audioContext!.currentTime + 0.1);
+    }
+    if (keyboardOscillator) {
+        keyboardOscillator.stop(audioContext!.currentTime + 0.1);
+        keyboardOscillator = null;
+        keyboardGainNode = null; // Gain node is tied to oscillator lifecycle
+    }
+
+    currentKeyboardFrequency = 0;
+    keyboardFrequencyDisplay.textContent = `0 Hz`;
+}
 
 // === Analysis & Game Logic ===
 function analyseMicrophoneInput() {
@@ -674,6 +787,15 @@ function animationLoop() {
         resizeCanvasIfNeeded(amplitudeGameCanvas);
         updateAmplitudeGameState();
         drawAmplitudeGameScene();
+    } else if (keyboardPage.classList.contains('active')) {
+        resizeCanvasIfNeeded(keyboardCanvas);
+        const { width, height } = keyboardCanvas;
+        keyboardCtx.clearRect(0, 0, width, height);
+        drawGrid(keyboardCtx, width, height);
+        
+        const displayAmplitude = keyboardOscillator ? 0.5 : 0;
+        drawWave(keyboardCtx, width, height, currentKeyboardFrequency, displayAmplitude, 'hsl(210, 100%, 60%)', 'hsl(210, 100%, 75%)', phase);
+        phase += 0.05;
     }
 }
 
@@ -713,6 +835,7 @@ function setupEventListeners() {
     backButtonExerciseSelection.addEventListener('click', showLandingPage);
     backButtonGame.addEventListener('click', showGameSelectionPage);
     backButtonAmplitudeGame.addEventListener('click', showGameSelectionPage);
+    backButtonKeyboard.addEventListener('click', showGameSelectionPage);
     backButtonExercisePageBasic.addEventListener('click', showExerciseSelectionPage);
     backButtonExercisePageChallenging.addEventListener('click', showExerciseSelectionPage);
 
@@ -720,6 +843,7 @@ function setupEventListeners() {
     // Game Selection
     tileToonMatchen.addEventListener('click', showGamePage);
     tileAmplitudeParcours.addEventListener('click', showAmplitudeGamePage);
+    tileKeyboard.addEventListener('click', showKeyboardPage);
 
     // Exercise Selection
     tileLevelBasic.addEventListener('click', showExercisePageBasic);
@@ -746,6 +870,62 @@ function setupEventListeners() {
         }
     });
 
+    // Keyboard controls
+    let activeKey: HTMLElement | null = null;
+    keyboardContainer.addEventListener('mousedown', (e) => {
+        // FIX: Cast result of `closest` to HTMLElement to ensure `dataset` property is available.
+        const key = (e.target as HTMLElement).closest<HTMLElement>('.key');
+        if (key && key.dataset.freq) {
+            const freq = parseFloat(key.dataset.freq);
+            playKeyboardNote(freq);
+            key.classList.add('active');
+            activeKey = key;
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isKeyboardActive && activeKey) {
+            stopKeyboardNote();
+            activeKey.classList.remove('active');
+            activeKey = null;
+        }
+    });
+
+    keyboardContainer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        // FIX: Cast result of `closest` to HTMLElement to ensure `dataset` property is available.
+        const key = (e.target as HTMLElement).closest<HTMLElement>('.key');
+        if (key && key.dataset.freq) {
+            const freq = parseFloat(key.dataset.freq);
+            playKeyboardNote(freq);
+            key.classList.add('active');
+            activeKey = key;
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+        if (isKeyboardActive && activeKey) {
+            stopKeyboardNote();
+            activeKey.classList.remove('active');
+            activeKey = null;
+        }
+    });
+    
+    octaveDownButton.addEventListener('click', () => {
+        if (octaveOffset > MIN_OFFSET) {
+            octaveOffset--;
+            updateKeyFrequencies();
+        }
+    });
+
+    octaveUpButton.addEventListener('click', () => {
+        if (octaveOffset < MAX_OFFSET) {
+            octaveOffset++;
+            updateKeyFrequencies();
+        }
+    });
+
+
     // Exercise Controls
     checkButtons.forEach(button => {
         button.addEventListener('click', (e) => {
@@ -762,6 +942,7 @@ function setupEventListeners() {
 // === Initialization ===
 function main() {
     setupEventListeners();
+    updateKeyFrequencies(); // Set initial frequencies for the keyboard
     requestAnimationFrame(animationLoop);
 }
 

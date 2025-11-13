@@ -492,11 +492,25 @@ function updateAmplitudeGameState() {
     
     // Update player position based on amplitude
     const targetY = height - (currentAmplitude * height * 1.5); // *1.5 for more sensitivity
-    player.y += (targetY - player.y) * 0.1; // Smooth movement
+    const diff = targetY - player.y;
+
+    // Use a slower smoothing factor when falling (diff > 0) to make it more forgiving
+    // and a faster one when rising to keep it responsive.
+    const smoothingFactor = diff > 0 ? 0.03 : 0.1;
+    player.y += diff * smoothingFactor;
+
+    // Check for collision with top/bottom boundaries
+    if (player.y - player.radius < 0 || player.y + player.radius > height) {
+        gameOver = true;
+        amplitudeGameOverlay.style.display = 'flex';
+        amplitudeGameMessage.textContent = 'Game Over!';
+        amplitudeRestartButton.textContent = 'Opnieuw';
+        return; // Stop further game logic for this frame
+    }
 
     // Move and generate obstacles
     frameCount++;
-    if (frameCount % 120 === 0) { // Add obstacle every 2 seconds at 60fps
+    if (frameCount % 150 === 0) { // Add obstacle every 2.5 seconds at 60fps
         const gapHeight = 120;
         const gapY = Math.random() * (height - gapHeight - 40) + 20;
         obstacles.push({ x: width, width: 40, gapY, gapHeight, passed: false });
